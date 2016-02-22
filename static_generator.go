@@ -26,3 +26,19 @@ func (s staticFile) isStatic() bool {
 func (s staticFile) getFilePath() string {
 	return s.filePath
 }
+
+func (p primaryKeyFile) generateData(channel chan string) {
+	num := int(p.numberOfEntities)
+	for entityID := 1; entityID <= num; entityID++ {
+		channel <- strconv.Itoa(entityID)
+	}
+	close(channel)
+}
+
+func (p primaryKeyFile) isStatic() bool {
+	return true
+}
+
+func (p primaryKeyFile) getFilePath() string {
+	return p.filePath
+}

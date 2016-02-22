@@ -10,6 +10,7 @@ import (
 
 const yamlFormatDescription = `primaryKeyFileName:  The name of the primary key file
 directory:           The path to the output directory
+zipFileName:         The name of the zip file write in the output directory
 numberOfEntities:    The total number of entities
 totalTimeInHours:    The total number of hours of data to be output
 files:               The list of output files

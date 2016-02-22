@@ -7,6 +7,7 @@ Here is a sample YAML configuration file:
 
 ```
 directory:         /usr/local/dataset/pumpdata
+zipFileName:       pumpdata.zip
 numberOfEntities:  2
 totalTimeInHours:  6
 pkFileName:        water_pumps.csv

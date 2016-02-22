@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"path"
 
 	"gopkg.in/yaml.v2"
 )
@@ -10,6 +9,7 @@ import (
 // Dataset is a wrapper around a configuration for a dataset export
 type Dataset struct {
 	Directory          string   `yaml:"directory"`
+	ZipFileName        string   `yaml:"zipFileName"`
 	PrimaryKeyFileName string   `yaml:"pkFileName"`
 	NumberOfEntities   uint16   `yaml:"numberOfEntities"`
 	TotalTimeInHours   uint16   `yaml:"totalTimeInHours"`
@@ -27,6 +27,11 @@ type DsFile struct {
 	Maximum                float64  `yaml:"maxValue"`
 	TimeStepVariance       float64  `yaml:"timeVariance"`
 	ValueVariance          float64  `yaml:"valueVariance"`
+}
+
+type primaryKeyFile struct {
+	filePath         string
+	numberOfEntities uint16
 }
 
 type staticFile struct {
@@ -67,31 +72,35 @@ func (d Dataset) String() string {
 
 // String the toString() method for the dataset file.
 func (f DsFile) String() string {
-	return fmt.Sprintf(`File {
-	FileName:               "%v"
-	DataType:               "%v"
-	ValueType:              "%v"
-	TimeStepInMilliseconds: "%v"
-	PossibleValues:         "%v"
-	Minimum:                "%v"
-	Maximum:                "%v"
-	TimeStepVariance:       "%v"
-	ValueVariance:          "%v"
-}
-`, f.FileName, f.DataType, f.ValueType, f.TimeStepInMilliseconds, f.PossibleValues, f.Minimum, f.Maximum, f.TimeStepVariance, f.ValueVariance)
+	return fmt.Sprintf(`
+		File {
+			FileName:               "%v"
+			DataType:               "%v"
+			ValueType:              "%v"
+			TimeStepInMilliseconds: "%v"
+			PossibleValues:         %v
+			Minimum:                "%v"
+			Maximum:                "%v"
+			TimeStepVariance:       "%v"
+			ValueVariance:          "%v"
+		}`, f.FileName, f.DataType, f.ValueType, f.TimeStepInMilliseconds, f.PossibleValues, f.Minimum, f.Maximum, f.TimeStepVariance, f.ValueVariance)
 }
 
 func (d Dataset) getFiles() []dataGenerator {
-	l := make([]dataGenerator, len(d.Files), len(d.Files))
+	l := make([]dataGenerator, len(d.Files)+1, len(d.Files)+1)
 
+	l[0] = primaryKeyFile{
+		filePath:         d.PrimaryKeyFileName,
+		numberOfEntities: d.NumberOfEntities,
+	}
 	for i, f := range d.Files {
-		l[i] = f.toGeneratedFile(d)
+		l[i+1] = f.toGeneratedFile(d)
 	}
 	return l
 }
 
 func (f DsFile) toGeneratedFile(d Dataset) dataGenerator {
-	fp := path.Join(d.Directory, f.FileName)
+	fp := f.FileName
 
 	if f.DataType == "static" {
 		return staticFile{
