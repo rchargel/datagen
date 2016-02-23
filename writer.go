@@ -4,15 +4,18 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"sync"
 	"time"
 )
 
+var sizeTypes = [4]string{"B", "KB", "MB", "GB"}
+
 func writeDataFiles(d Dataset) error {
 	if !exists(d.Directory) {
-		fmt.Printf("Creating directory %v\n", d.Directory)
+		log.Printf("Creating directory %v", d.Directory)
 		err := os.Mkdir(d.Directory, os.ModePerm)
 		if err != nil {
 			return err
@@ -20,9 +23,7 @@ func writeDataFiles(d Dataset) error {
 	}
 
 	generators := d.getFiles()
-
 	zipChan := make(chan *os.File)
-
 	wait := compressFiles(d.Directory, d.ZipFileName, zipChan)
 
 	var wg sync.WaitGroup
@@ -30,9 +31,10 @@ func writeDataFiles(d Dataset) error {
 	for _, generator := range generators {
 		go func(gen dataGenerator, dir string) {
 			defer wg.Done()
+			log.Printf("Started writing file %v", gen.getFilePath())
 			file, err := writeDataToFile(gen, dir)
 			if err != nil {
-				fmt.Printf("ERROR Writing %v: %v!\n", file, err.Error())
+				log.Printf("ERROR Writing %v: %v!", file, err.Error())
 				panic(err)
 			}
 			zipChan <- file
@@ -49,10 +51,11 @@ func writeDataFiles(d Dataset) error {
 func compressFiles(directory, zipFileName string, zipChan chan *os.File) *sync.WaitGroup {
 	zipFilePath := path.Join(directory, zipFileName)
 	if exists(zipFilePath) {
-		fmt.Printf("File %v already exists, deleting file...\n", zipFileName)
+		log.Printf("File %v already exists", zipFileName)
+		log.Printf("Deleting file %v", zipFileName)
 		os.Remove(zipFilePath)
 	}
-	fmt.Printf("Creating file %v\n", zipFileName)
+	log.Printf("Creating new file %v", zipFileName)
 
 	zipFile, _ := os.Create(zipFilePath)
 	var wg sync.WaitGroup
@@ -79,9 +82,10 @@ func compressFiles(directory, zipFileName string, zipChan chan *os.File) *sync.W
 				panic(err)
 			}
 			os.Remove(file.Name())
-			fmt.Printf("Compressed file %v in %v\n", file.Name(), time.Since(startTime))
+			log.Printf("Compressed file %v in %v", file.Name(), time.Since(startTime))
 		}
 		zw.Close()
+		log.Printf("Zip file %v (%v) completed", zipFile.Name(), getFileSize(zipFile))
 	}()
 	return &wg
 }
@@ -92,7 +96,8 @@ func writeDataToFile(gen dataGenerator, dir string) (*os.File, error) {
 	var file *os.File
 	var err error
 	if exists(filepath) {
-		fmt.Printf("File %v already exists, deleting old file\n", filepath)
+		log.Printf("File %v already exists", filepath)
+		log.Printf("Deleting file %v", filepath)
 		err = os.Remove(filepath)
 		if err != nil {
 			return file, err
@@ -115,8 +120,10 @@ func writeDataToFile(gen dataGenerator, dir string) (*os.File, error) {
 			return file, err
 		}
 	}
-	fmt.Printf("Finished writing file %v in %v\n", filepath, time.Since(start))
-	return os.Open(filepath)
+
+	file, err = os.Open(filepath)
+	log.Printf("Finished writing file %v (%v) in %v\n", filepath, getFileSize(file), time.Since(start))
+	return file, err
 }
 
 func exists(name string) bool {
@@ -126,4 +133,19 @@ func exists(name string) bool {
 		}
 	}
 	return true
+}
+
+func getFileSize(file *os.File) string {
+	fileInfo, _ := file.Stat()
+	size := float64(fileInfo.Size())
+	sizeIdx := 0
+	for size >= 1024 && sizeIdx < len(sizeTypes) {
+		size /= 1024
+		sizeIdx++
+	}
+
+	intsize := uint32(size * 10)
+	size = float64(intsize) / 10.0
+
+	return fmt.Sprintf("%g%v", size, sizeTypes[sizeIdx])
 }

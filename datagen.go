@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"time"
 )
@@ -35,6 +36,8 @@ type dataGenerator interface {
 
 func init() {
 	const usage = "The YAML configuration file"
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	flag.StringVar(&yamlFile, "yaml-file", "", usage)
 	flag.StringVar(&yamlFile, "f", "", usage+" (shorthand)")
 	flag.BoolVar(&outputYamlFormat, "h", false, "Describes the input YAML format")
@@ -72,5 +75,5 @@ func main() {
 	}
 
 	elapsedTime := time.Since(start)
-	fmt.Printf("Total Run Time: %s\n", elapsedTime)
+	log.Printf("Total Run Time: %s", elapsedTime)
 }
